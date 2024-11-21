@@ -33,13 +33,6 @@ function Nota() {
     setIsUpdate(false);
   };
 
-  const showID = async (id) => {
-    try {
-      console.log(id, 'soy id')
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
 
   const showModalUsuarioEdit = async () => {
     try {
@@ -56,9 +49,11 @@ function Nota() {
       setIsModalOpen(true);
       setIsUpdate(true);
       let response = await axios.get(`http://localhost:3000/notas/${id}`);
-      const usuarioResponse = await axios.get(`http://localhost:3000/usuarios/${id}`);
-
-      form.setFieldsValue(response.data);
+      const usuarioResponse = await axios.get(
+        `http://localhost:3000/usuarios/${id}`
+      );
+      console.log(response.data, "soy response");
+      form.setFieldsValue(response.data.User.id);
       showModalUsuarioEdit();
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -99,6 +94,7 @@ function Nota() {
       title: "UserID",
       dataIndex: "userId",
       key: "userId",
+      render: (User) => User?.id || "Sin asignar",
     },
 
     {
@@ -144,9 +140,9 @@ function Nota() {
   }, []);
 
   const onFinish = async (values) => {
-    console.log(values, 'soy value')
+    console.log(values, "soy value");
     const idNotas = values.id;
-    console.log(idNotas, 'soy idNotas')
+    console.log(idNotas, "soy idNotas");
     const { id, ...data } = values;
     if (isUpdate) {
       const response = await axios.put(
@@ -154,8 +150,14 @@ function Nota() {
         data
       );
     } else {
-      const response = await axios.post(`http://localhost:3000/notas${id}`, values );
-      const responseU = await axios.post(`http://localhost:3000/notas${id}`, values );
+      const response = await axios.post(
+        `http://localhost:3000/notas${id}`,
+        values
+      );
+      const responseU = await axios.post(
+        `http://localhost:3000/notas${id}`,
+        values
+      );
     }
     getData();
     form.resetFields();
@@ -193,6 +195,10 @@ function Nota() {
               label: item,
             }))}
           />
+
+          <Form.Item name="user_ID" hidden>
+            <Input type="text" />
+          </Form.Item>
 
           <Form.Item>
             {isUpdate ? (
