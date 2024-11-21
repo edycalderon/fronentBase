@@ -3,6 +3,7 @@ import "./App.css";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import AppCliente from "./componentes/AppCliente";
+import Nota from "./componentes/Nota";
 
 
 function App() {
@@ -199,6 +200,9 @@ function App() {
 
       <div>
       <AppCliente/>
+      </div>
+      <div>
+        <Nota/>
       </div>
     </>
   );

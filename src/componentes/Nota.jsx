@@ -1,26 +1,68 @@
-import { Table, Row, Col, Modal, Form, Input, Button, Flex, Popconfirm } from "antd";
+import {
+  Table,
+  Row,
+  Col,
+  Modal,
+  Form,
+  Input,
+  Button,
+  Flex,
+  Popconfirm,
+  Select,
+} from "antd";
 import axios from "axios";
 import { useEffect, useState } from "react";
 
-
-function AppCliente() {
+function Nota() {
   const [data, setData] = useState([]);
-
+  const [dataUsuario, setDataUsuario] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
   const [isUpdate, setIsUpdate] = useState(false);
+
+  const nameUser = dataUsuario.map((item) => item.nombre);
+  console.log(nameUser, "soy nameUser");
+
+  const idUser = data.map((item) => item.User.id);
+
+  const [selectedItems, setSelectedItems] = useState([]);
+  const filteredOptions = nameUser.filter((o) => !selectedItems.includes(o));
 
   const showModal = () => {
     setIsModalOpen(true);
     setIsUpdate(false);
   };
 
+  const showID = async (id) => {
+    try {
+      console.log(id, 'soy id')
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
+  const showModalUsuarioEdit = async () => {
+    try {
+      let responseU = await axios.get(`http://localhost:3000/usuarios`);
+      form.setFieldValue(responseU.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
   const showModalEdit = async (id) => {
-    console.log(id);
-    setIsModalOpen(true);
-    setIsUpdate(true);
-    let response = await axios.get(`http://localhost:3000/clientes/${id}`);
-    form.setFieldsValue(response.data);
+    try {
+      console.log(id);
+      setIsModalOpen(true);
+      setIsUpdate(true);
+      let response = await axios.get(`http://localhost:3000/notas/${id}`);
+      const usuarioResponse = await axios.get(`http://localhost:3000/usuarios/${id}`);
+
+      form.setFieldsValue(response.data);
+      showModalUsuarioEdit();
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
   };
 
   const handleOk = () => {
@@ -33,9 +75,9 @@ function AppCliente() {
   };
 
   const confirm = async (id) => {
-    await axios.delete(`http://localhost:3000/clientes/${id}`)
+    await axios.delete(`http://localhost:3000/notas/${id}`);
     getData();
-  }
+  };
 
   const columns = [
     {
@@ -44,44 +86,19 @@ function AppCliente() {
       key: "id",
     },
     {
-      title: "Nombre",
+      title: "Nota",
+      dataIndex: "nota",
+      key: "nota",
+    },
+    {
+      title: "Usuario",
       dataIndex: "nombre",
       key: "nombre",
     },
     {
-      title: "Apellido",
-      dataIndex: "apellido",
-      key: "apellido",
-    },
-    {
-      title: "address",
-      dataIndex: "address",
-      key: "address",
-    },
-
-    {
-      title: "Estatus",
-      dataIndex: "estatus",
-      key: "estatus",
-      render: (text) => {
-        return text ? "active" : "Inactive";
-      },
-    },
-    {
-      title: "Type",
-      dataIndex: "type",
-      key: "type",
-      render: (text) => {
-        return text ? "Corporativo" : "Normal";
-      },
-    },
-    {
-      title: "Fecha",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      render: (text) =>  {
-        return (text.slice(0, 10))
-      },
+      title: "UserID",
+      dataIndex: "userId",
+      key: "userId",
     },
 
     {
@@ -106,8 +123,8 @@ function AppCliente() {
               okText="Yes"
               cancelText="No"
               onConfirm={() => confirm(Row.id)}
-            > 
-            <Button danger>Delete</Button>
+            >
+              <Button danger>Delete</Button>
             </Popconfirm>
           </>
         );
@@ -116,8 +133,10 @@ function AppCliente() {
   ];
 
   const getData = async () => {
-    let response = await axios.get("http://localhost:3000/clientes");
+    let response = await axios.get("http://localhost:3000/notas");
+    let responseU = await axios.get(`http://localhost:3000/usuarios`);
     setData(response.data);
+    setDataUsuario(responseU.data);
   };
 
   useEffect(() => {
@@ -125,18 +144,18 @@ function AppCliente() {
   }, []);
 
   const onFinish = async (values) => {
-    const idCliente = values.id;
+    console.log(values, 'soy value')
+    const idNotas = values.id;
+    console.log(idNotas, 'soy idNotas')
     const { id, ...data } = values;
     if (isUpdate) {
       const response = await axios.put(
-        `http://localhost:3000/clientes/${idCliente}`,
+        `http://localhost:3000/notas/${idNotas}`,
         data
       );
     } else {
-      const response = await axios.post(
-        `http://localhost:3000/clientes`,
-        values
-      );
+      const response = await axios.post(`http://localhost:3000/notas${id}`, values );
+      const responseU = await axios.post(`http://localhost:3000/notas${id}`, values );
     }
     getData();
     form.resetFields();
@@ -146,7 +165,7 @@ function AppCliente() {
   return (
     <>
       <Button type="primary" onClick={showModal}>
-        Nuevo Cliente
+        Agregar Nota
       </Button>
 
       <Modal
@@ -158,29 +177,22 @@ function AppCliente() {
       >
         <Form form={form} onFinish={onFinish}>
           <Form.Item
-            name="nombre"
+            name="nota"
             rules={[{ required: true, message: "Please input your Username!" }]}
           >
-            <Input placeholder="Username" />
+            <Input placeholder="Nota" />
           </Form.Item>
 
-          <Form.Item
-            name="apellido"
-            rules={[{ required: true, message: "Please input your Password!" }]}
-          >
-            <Input type="text" placeholder="Apellido" />
-          </Form.Item>
-
-          <Form.Item
-            name="address"
-            rules={[{ required: true, message: "Please input your Password!" }]}
-          >
-            <Input type="text" placeholder="Direccion" />
-          </Form.Item>
-
-          <Form.Item name="id" hidden>
-            <Input type="text" />
-          </Form.Item>
+          <Select
+            defaultValue="1"
+            style={{
+              width: "100%",
+            }}
+            options={filteredOptions.map((item) => ({
+              value: item,
+              label: item,
+            }))}
+          />
 
           <Form.Item>
             {isUpdate ? (
@@ -205,4 +217,4 @@ function AppCliente() {
   );
 }
 
-export default AppCliente;
+export default Nota;
