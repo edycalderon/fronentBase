@@ -6,7 +6,6 @@ import {
   Form,
   Input,
   Button,
-  Flex,
   Popconfirm,
   Select,
 } from "antd";
@@ -21,9 +20,6 @@ function Nota() {
   const [isUpdate, setIsUpdate] = useState(false);
 
   const nameUser = dataUsuario.map((item) => item.nombre);
-  console.log(nameUser, "soy nameUser");
-
-  const idUser = data.map((item) => item.User.id);
 
   const [selectedItems, setSelectedItems] = useState([]);
   const filteredOptions = nameUser.filter((o) => !selectedItems.includes(o));
@@ -33,28 +29,20 @@ function Nota() {
     setIsUpdate(false);
   };
 
-
-  const showModalUsuarioEdit = async () => {
-    try {
-      let responseU = await axios.get(`http://localhost:3000/usuarios`);
-      form.setFieldValue(responseU.data);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
-
   const showModalEdit = async (id) => {
     try {
-      console.log(id);
       setIsModalOpen(true);
       setIsUpdate(true);
       let response = await axios.get(`http://localhost:3000/notas/${id}`);
-      const usuarioResponse = await axios.get(
-        `http://localhost:3000/usuarios/${id}`
-      );
       console.log(response.data, "soy response");
-      form.setFieldsValue(response.data.User.id);
-      showModalUsuarioEdit();
+
+      
+      form.setFieldsValue({
+        id: response.data.id,
+        nota: response.data.nota,
+        user_ID: response.data.User.id,
+        userName: response.data.User.nombre
+      });
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -74,6 +62,42 @@ function Nota() {
     getData();
   };
 
+  const getData = async () => {
+    try {
+      let response = await axios.get("http://localhost:3000/notas");
+      let responseU = await axios.get(`http://localhost:3000/usuarios`);
+      const dataWithUserNames = response.data.map((nota) => {
+        const user = responseU.data.find((usuario) => usuario.id === nota.User.id);
+        return { ...nota, User: user };
+      });
+      setData(dataWithUserNames);
+      setDataUsuario(responseU.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
+  useEffect(() => {
+    getData();
+  }, []);
+
+  const onFinish = async (values) => {
+    const idNotas = values.id;
+    const { id, ...data } = values;
+    try {
+      if (isUpdate) {
+        await axios.put(`http://localhost:3000/notas/${idNotas}`, data);
+      } else {
+        await axios.post(`http://localhost:3000/notas`, values);
+      }
+      getData();
+      form.resetFields();
+      handleCancel();
+    } catch (error) {
+      console.error("Error saving data:", error);
+    }
+  };
+
   const columns = [
     {
       title: "ID",
@@ -87,38 +111,35 @@ function Nota() {
     },
     {
       title: "Usuario",
-      dataIndex: "nombre",
+      dataIndex: ["User", "nombre"],
       key: "nombre",
     },
     {
       title: "UserID",
-      dataIndex: "userId",
+      dataIndex: ["User", "id"],
       key: "userId",
-      render: (User) => User?.id || "Sin asignar",
     },
-
     {
       title: "Actions",
-      dataIndex: "actions ",
+      dataIndex: "actions",
       key: "actions",
-      render: (value, Row) => {
+      render: (value, row) => {
         return (
           <>
             <Button
               type="default"
-              onClick={() => showModalEdit(Row.id)}
+              onClick={() => showModalEdit(row.id)}
               style={{ marginRight: "4px" }}
             >
-              {" "}
-              Editar{" "}
+              Editar
             </Button>
 
             <Popconfirm
               title="Delete the user"
               description="Are you sure to delete this task?"
-              okText="Yes"
+              okText="Yes" 
               cancelText="No"
-              onConfirm={() => confirm(Row.id)}
+              onConfirm={() => confirm(row.id)}
             >
               <Button danger>Delete</Button>
             </Popconfirm>
@@ -128,42 +149,6 @@ function Nota() {
     },
   ];
 
-  const getData = async () => {
-    let response = await axios.get("http://localhost:3000/notas");
-    let responseU = await axios.get(`http://localhost:3000/usuarios`);
-    setData(response.data);
-    setDataUsuario(responseU.data);
-  };
-
-  useEffect(() => {
-    getData();
-  }, []);
-
-  const onFinish = async (values) => {
-    console.log(values, "soy value");
-    const idNotas = values.id;
-    console.log(idNotas, "soy idNotas");
-    const { id, ...data } = values;
-    if (isUpdate) {
-      const response = await axios.put(
-        `http://localhost:3000/notas/${idNotas}`,
-        data
-      );
-    } else {
-      const response = await axios.post(
-        `http://localhost:3000/notas${id}`,
-        values
-      );
-      const responseU = await axios.post(
-        `http://localhost:3000/notas${id}`,
-        values
-      );
-    }
-    getData();
-    form.resetFields();
-    handleCancel();
-    console.log("Received values of form: ", values);
-  };
   return (
     <>
       <Button type="primary" onClick={showModal}>
@@ -175,31 +160,30 @@ function Nota() {
         open={isModalOpen}
         onOk={handleOk}
         onCancel={handleCancel}
-        footer={""}
+        footer={null}
       >
         <Form form={form} onFinish={onFinish}>
+          <Form.Item name="id" hidden>
+            <Input type="text" />
+          </Form.Item>
           <Form.Item
             name="nota"
-            rules={[{ required: true, message: "Please input your Username!" }]}
+            rules={[{ required: true, message: "Please input your note!" }]}
           >
             <Input placeholder="Nota" />
           </Form.Item>
-
-          <Select
-            defaultValue="1"
-            style={{
-              width: "100%",
-            }}
-            options={filteredOptions.map((item) => ({
-              value: item,
-              label: item,
-            }))}
-          />
-
-          <Form.Item name="user_ID" hidden>
-            <Input type="text" />
+          <Form.Item
+            name="user_ID"
+            rules={[{ required: true, message: "Please select a user!" }]}
+          >
+            <Select
+              style={{ width: "100%" }}
+              options={dataUsuario.map((item) => ({
+                value: item.id,
+                label: item.nombre,
+              }))}
+            />
           </Form.Item>
-
           <Form.Item>
             {isUpdate ? (
               <Button block type="primary" htmlType="submit">
@@ -216,7 +200,7 @@ function Nota() {
 
       <Row>
         <Col md={24} style={{ display: "flex", justifyContent: "center" }}>
-          <Table rowKey={"id"} dataSource={data} columns={columns} />
+          <Table rowKey="id" dataSource={data} columns={columns} />
         </Col>
       </Row>
     </>
